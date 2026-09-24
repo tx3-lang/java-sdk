@@ -1,0 +1,6 @@
+{
+  "jsonrpc": "2.0",
+  "method": "trp.checkStatus",
+  "params": {"hashes": ["submitted-hash"]},
+  "id": "status-1"
+}

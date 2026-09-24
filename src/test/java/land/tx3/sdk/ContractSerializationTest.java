@@ -21,7 +21,7 @@ class ContractSerializationTest {
         "{\"txHashHex\":\"aabb\",\"txCborHex\":\"ccdd\"}",
         mapper.writeValueAsString(new SignRequest("aabb", "ccdd")));
     assertEquals(
-        "{\"publicKeyHex\":\"0011\",\"signatureHex\":\"2233\",\"type\":\"VKEY\"}",
+        "{\"publicKeyHex\":\"0011\",\"signatureHex\":\"2233\",\"type\":\"vkey\"}",
         mapper.writeValueAsString(new Witness("0011", "2233", WitnessType.VKEY)));
   }
 

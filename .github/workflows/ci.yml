@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - windows-2025
+          - windows-11-arm
+          - macos-15-intel
+          - macos-14
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Check formatting
+        run: ./mvnw -B -ntp spotless:check
+      - name: Run unit tests
+        run: ./mvnw -B -ntp test
+      - name: Verify package
+        run: ./mvnw -B -ntp verify
+      - name: Resolve package from an external consumer
+        run: ./mvnw -B -ntp install && ./mvnw -B -ntp -f examples/consumer/pom.xml package
+      - name: Record dependency tree
+        run: ./mvnw -B -ntp dependency:tree -DoutputFile=target/dependency-tree.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dependency-tree-${{ matrix.runner }}
+          path: target/dependency-tree.txt

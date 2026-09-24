@@ -5,6 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.net.URI;
 import land.tx3.sdk.Address;
 import land.tx3.sdk.ClientOptions;
+import land.tx3.sdk.SignRequest;
+import land.tx3.sdk.Signer;
+import land.tx3.sdk.Witness;
+import land.tx3.sdk.WitnessType;
 import org.junit.jupiter.api.Test;
 
 /** Compile-time smoke test from outside the library package. */
@@ -16,5 +20,26 @@ class ExternalConsumerTest {
 
     assertEquals("addr_test1qconsumer", address.value());
     assertEquals(URI.create("http://localhost:8164"), options.endpoint());
+  }
+
+  @Test
+  void implementsSignerOutsideTheLibraryPackage() {
+    Signer signer =
+        new Signer() {
+          @Override
+          public Address address() {
+            return new Address("external-consumer-address");
+          }
+
+          @Override
+          public Witness sign(SignRequest request) {
+            return new Witness("00", "11", WitnessType.VKEY);
+          }
+        };
+
+    var request =
+        new SignRequest("0000000000000000000000000000000000000000000000000000000000000000", "80");
+    assertEquals("external-consumer-address", signer.address().value());
+    assertEquals(WitnessType.VKEY, signer.sign(request).type());
   }
 }

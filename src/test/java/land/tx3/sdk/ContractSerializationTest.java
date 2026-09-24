@@ -18,8 +18,10 @@ class ContractSerializationTest {
     assertEquals(
         "{\"value\":\"addr_test1\"}", mapper.writeValueAsString(new Address("addr_test1")));
     assertEquals(
-        "{\"txHashHex\":\"aabb\",\"txCborHex\":\"ccdd\"}",
-        mapper.writeValueAsString(new SignRequest("aabb", "ccdd")));
+        "{\"txHashHex\":\"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f\",\"txCborHex\":\"ccdd\"}",
+        mapper.writeValueAsString(
+            new SignRequest(
+                "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "ccdd")));
     assertEquals(
         "{\"publicKeyHex\":\"0011\",\"signatureHex\":\"2233\",\"type\":\"VKEY\"}",
         mapper.writeValueAsString(new Witness("0011", "2233", WitnessType.VKEY)));

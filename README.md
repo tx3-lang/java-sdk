@@ -1,8 +1,8 @@
 # Tx3 SDK for Java
 
-The Java SDK is the Java 21 client library for Tx3 protocols. This foundation release contains
-the public contract values, signer interface, and typed error hierarchy. Protocol loading and TRP
-runtime behavior will arrive in later releases.
+The Java SDK is the Java 21 client library for Tx3 protocols. It includes extensible signer
+contracts, a raw-key Java Ed25519 signer, and a Cardano mnemonic signer derived at
+`m/1852'/1815'/0'/0/0`.
 
 ## Requirements
 
@@ -35,6 +35,25 @@ import land.tx3.sdk.ClientOptions;
 var address = new Address("addr_test1...");
 var options = ClientOptions.forEndpoint(java.net.URI.create("http://localhost:8164"));
 ```
+
+## Sign transactions
+
+`Ed25519Signer` accepts only a 32-byte private-key seed and an address controlled by that key.
+Mnemonic derivation belongs to `CardanoSigner`; both implementations sign the 32-byte
+`txHashHex` from `SignRequest` and return a `VKEY` witness.
+
+```java
+import land.tx3.sdk.Address;
+import land.tx3.sdk.CardanoSigner;
+import land.tx3.sdk.SignRequest;
+
+var signer = new CardanoSigner(mnemonic, new Address("addr_test1..."));
+var witness = signer.sign(new SignRequest(txHashHex, txCborHex));
+```
+
+Key inputs and derived key material are kept in defensive copies and are never written to logs or
+error messages. Invalid keys and malformed hashes use the SDK's typed `ValidationException`;
+derivation, address-binding, and cryptographic failures use `SigningException`.
 
 ## Development
 

@@ -1,7 +1,8 @@
 # Tx3 SDK for Java
 
 The Java SDK is the Java 21 client library for Tx3 protocols. It contains public contract values,
-the signer interface, the typed error hierarchy, and an asynchronous low-level TRP client.
+the signer interface, the typed error hierarchy, TII protocol loading and introspection, and an
+asynchronous low-level TRP client.
 
 ## Requirements
 
@@ -40,6 +41,17 @@ The low-level client exposes `resolve`, `submit`, and `checkStatus`; each return
 `CompletableFuture`. Cancelling that future cancels the underlying HTTP operation. Transport
 failures are reported as `TransportException`, whose `failure()` discriminator separates network,
 HTTP status, JSON-RPC, malformed response, timeout, and cancellation cases without message parsing.
+
+Load a canonical TII document from a path, JSON text, bytes, or a Jackson `JsonNode`:
+
+```java
+var protocol = land.tx3.sdk.Protocol.fromFile(java.nio.file.Path.of("transfer.tii"));
+var transfer = protocol.transactions().get("transfer");
+var quantityType = transfer.parameters().get("quantity");
+```
+
+Loading failures throw `ProtocolException`; its `kind()` distinguishes file reads, malformed JSON,
+and invalid TII structure without including the document contents in the error.
 
 ## Development
 

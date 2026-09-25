@@ -54,6 +54,19 @@ class ContractSerializationTest {
   }
 
   @Test
+  void serializesTirEnvelopeWithoutItsRetainedTiiSource() throws Exception {
+    var source =
+        mapper.readTree(
+            "{\"content\":\"aabb\",\"encoding\":\"hex\",\"version\":\"v1beta0\"}");
+    var envelope = new TirEnvelope("aabb", "hex", "v1beta0", source);
+
+    assertEquals(
+        "{\"content\":\"aabb\",\"encoding\":\"hex\",\"version\":\"v1beta0\"}",
+        mapper.writeValueAsString(envelope));
+    assertEquals(source, envelope.json());
+  }
+
+  @Test
   void reportsInvalidSignerContractsThroughTheTypedHierarchy() {
     assertEquals(
         "txHashHex",

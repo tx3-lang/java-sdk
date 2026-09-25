@@ -71,6 +71,30 @@ schema-directed encoding. Shape, range, and JSON-encoding failures throw
 `ArgumentEncodingException`, whose `kind()`, `path()`, and `expected()` fields contain structural
 context without including rejected values.
 
+Build the high-level facade from a loaded protocol, select an optional profile, bind parties, and
+resolve through the same type-directed argument path:
+
+```java
+var client = protocol.client()
+    .trpEndpoint(java.net.URI.create("http://localhost:8164"))
+    .withProfile("preprod")
+    .withHeader("Authorization", "Bearer ...")
+    .withParty("sender", land.tx3.sdk.Party.address(address))
+    .withEnvValue("network", "preview")
+    .build();
+
+var resolved = client.tx("transfer")
+    .arg("quantity", 10_000_000)
+    .resolve();
+```
+
+`build()` reports missing connection settings and unknown profile or party names as
+`MissingTrpEndpointException`, `UnknownProfileException`, and `UnknownPartyException`.
+`Tx3Client.tx()` reports `UnknownTransactionException`, while a missing required argument at
+resolve time reports `ResolutionException`. Generated clients seed the same builder with
+`Tx3ClientBuilder.fromParts(...)`, bind statically known parties with `withPartyUnchecked`, and
+construct canonical values with `argTagged`; that path retains no TII or parameter schema.
+
 ## Development
 
 These are the canonical foundation checks:

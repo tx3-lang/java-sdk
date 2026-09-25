@@ -10,7 +10,13 @@ public final class Profile {
   private final Map<String, JsonNode> environment;
   private final Map<String, JsonNode> parties;
 
-  Profile(Map<String, JsonNode> environment, Map<String, JsonNode> parties) {
+  /**
+   * Creates an immutable profile from environment values and party addresses.
+   *
+   * <p>This constructor is public so generated clients can embed deconstructed profile data for
+   * {@link Tx3ClientBuilder#fromParts} without retaining a TII document.
+   */
+  public Profile(Map<String, JsonNode> environment, Map<String, JsonNode> parties) {
     this.environment = immutableNodes(environment);
     this.parties = immutableNodes(parties);
   }
@@ -30,6 +36,9 @@ public final class Profile {
   }
 
   private static Map<String, JsonNode> copyNodes(Map<String, JsonNode> source) {
+    if (source == null) {
+      throw new ValidationException("profile", "profile maps must not be null");
+    }
     var result = new LinkedHashMap<String, JsonNode>();
     source.forEach((key, value) -> result.put(key, value.deepCopy()));
     return result;

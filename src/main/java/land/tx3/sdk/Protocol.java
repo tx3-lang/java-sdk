@@ -139,6 +139,16 @@ public final class Protocol {
     return json.deepCopy();
   }
 
+  /**
+   * Starts configuring the high-level client for this protocol.
+   *
+   * <p>The returned builder owns deconstructed copies of the protocol state; a built client does
+   * not retain this {@code Protocol} instance.
+   */
+  public Tx3ClientBuilder client() {
+    return Tx3ClientBuilder.fromProtocol(this);
+  }
+
   private static ProtocolInfo readInfo(JsonNode value, String sourceName) {
     return new ProtocolInfo(
         requiredText(value, "name", sourceName),

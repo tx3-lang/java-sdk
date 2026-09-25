@@ -8,6 +8,7 @@ public abstract sealed class Tx3Exception extends RuntimeException
         UnknownPartyException,
         MissingTrpEndpointException,
         ValidationException,
+        ArgumentEncodingException,
         TransportException,
         ResolutionException,
         SigningException,

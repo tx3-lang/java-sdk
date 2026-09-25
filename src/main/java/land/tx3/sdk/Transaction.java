@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /** A TII transaction declaration with its TIR envelope and interpreted parameter metadata. */
 public final class Transaction {
@@ -36,5 +37,18 @@ public final class Transaction {
   /** Alias for {@link #parameters()} using the TII field's terminology. */
   public Map<String, ParamType> params() {
     return parameters;
+  }
+
+  /** Returns a declared parameter type using a case-insensitive name match. */
+  public Optional<ParamType> parameterType(String name) {
+    Objects.requireNonNull(name, "name");
+    var exact = parameters.get(name);
+    if (exact != null) {
+      return Optional.of(exact);
+    }
+    return parameters.entrySet().stream()
+        .filter(entry -> entry.getKey().equalsIgnoreCase(name))
+        .map(Map.Entry::getValue)
+        .findFirst();
   }
 }

@@ -23,7 +23,7 @@ class ContractSerializationTest {
             new SignRequest(
                 "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "ccdd")));
     assertEquals(
-        "{\"publicKeyHex\":\"0011\",\"signatureHex\":\"2233\",\"type\":\"VKEY\"}",
+        "{\"publicKeyHex\":\"0011\",\"signatureHex\":\"2233\",\"type\":\"vkey\"}",
         mapper.writeValueAsString(new Witness("0011", "2233", WitnessType.VKEY)));
   }
 
@@ -53,6 +53,18 @@ class ContractSerializationTest {
         "{\"endpoint\":\"https://trp.example\",\"headers\":{\"X-First\":\"one\","
             + "\"X-Second\":\"two\"},\"timeout\":10.000000000}",
         mapper.writeValueAsString(options));
+  }
+
+  @Test
+  void serializesTirEnvelopeWithoutItsRetainedTiiSource() throws Exception {
+    var source =
+        mapper.readTree("{\"content\":\"aabb\",\"encoding\":\"hex\",\"version\":\"v1beta0\"}");
+    var envelope = new TirEnvelope("aabb", "hex", "v1beta0", source);
+
+    assertEquals(
+        "{\"content\":\"aabb\",\"encoding\":\"hex\",\"version\":\"v1beta0\"}",
+        mapper.writeValueAsString(envelope));
+    assertEquals(source, envelope.json());
   }
 
   @Test

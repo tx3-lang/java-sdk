@@ -2,9 +2,13 @@ package consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.math.BigInteger;
 import java.net.URI;
 import land.tx3.sdk.Address;
+import land.tx3.sdk.ArgEncoder;
+import land.tx3.sdk.ArgValue;
 import land.tx3.sdk.ClientOptions;
+import land.tx3.sdk.ParamType;
 import land.tx3.sdk.SignRequest;
 import land.tx3.sdk.Signer;
 import land.tx3.sdk.Witness;
@@ -20,6 +24,9 @@ class ExternalConsumerTest {
 
     assertEquals("addr_test1qconsumer", address.value());
     assertEquals(URI.create("http://localhost:8164"), options.endpoint());
+    assertEquals(
+        ArgValue.integer(BigInteger.valueOf(42)),
+        ArgEncoder.encode(new ParamType.Integer(), BigInteger.valueOf(42)));
   }
 
   @Test

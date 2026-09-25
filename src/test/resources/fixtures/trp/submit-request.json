@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "method": "trp.submit",
+  "params": {
+    "tx": {"content": "deadbeef", "contentType": "application/cbor"},
+    "witnesses": [{
+      "key": {"content": "0011", "contentType": "hex"},
+      "signature": {"content": "2233", "contentType": "hex"},
+      "type": "vkey"
+    }]
+  },
+  "id": "submit-1"
+}

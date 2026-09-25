@@ -18,6 +18,8 @@ class ErrorHierarchyTest {
             new UnknownPartyException("sender"),
             new MissingTrpEndpointException(),
             new ValidationException("field", "invalid field"),
+            new ArgumentEncodingException(
+                ArgumentEncodingException.Kind.SHAPE, "$.amount", "BigInteger"),
             new TransportException(TransportFailure.TIMEOUT, "timed out"),
             new ResolutionException("transfer", "amount", "missing amount"),
             new SigningException(address, "hash mismatch"),
@@ -25,11 +27,11 @@ class ErrorHierarchyTest {
             new PollingException("aabb", "finalized", "poll timed out"));
 
     errors.forEach(error -> assertInstanceOf(Tx3Exception.class, error));
-    assertEquals(TransportFailure.TIMEOUT, ((TransportException) errors.get(6)).failure());
-    assertEquals("transfer", ((ResolutionException) errors.get(7)).transaction());
-    assertEquals("amount", ((ResolutionException) errors.get(7)).parameter());
-    assertEquals(address, ((SigningException) errors.get(8)).signerAddress());
-    assertEquals("aabb", ((SubmissionException) errors.get(9)).transactionHashHex());
-    assertEquals("finalized", ((PollingException) errors.get(10)).targetStage());
+    assertEquals(TransportFailure.TIMEOUT, ((TransportException) errors.get(7)).failure());
+    assertEquals("transfer", ((ResolutionException) errors.get(8)).transaction());
+    assertEquals("amount", ((ResolutionException) errors.get(8)).parameter());
+    assertEquals(address, ((SigningException) errors.get(9)).signerAddress());
+    assertEquals("aabb", ((SubmissionException) errors.get(10)).transactionHashHex());
+    assertEquals("finalized", ((PollingException) errors.get(11)).targetStage());
   }
 }

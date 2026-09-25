@@ -56,8 +56,7 @@ class ContractSerializationTest {
   @Test
   void serializesTirEnvelopeWithoutItsRetainedTiiSource() throws Exception {
     var source =
-        mapper.readTree(
-            "{\"content\":\"aabb\",\"encoding\":\"hex\",\"version\":\"v1beta0\"}");
+        mapper.readTree("{\"content\":\"aabb\",\"encoding\":\"hex\",\"version\":\"v1beta0\"}");
     var envelope = new TirEnvelope("aabb", "hex", "v1beta0", source);
 
     assertEquals(

@@ -166,6 +166,10 @@ class FacadeTest {
     assertEquals(
         "addr_argument",
         transport.params().path("args").path("sender").path("address").textValue());
+
+    client.tx("init").arg("participants", List.of(new byte[] {1})).resolve().join();
+    assertEquals(
+        "addr_builder", transport.params().path("args").path("sender").path("address").textValue());
   }
 
   @Test

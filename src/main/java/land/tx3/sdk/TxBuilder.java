@@ -101,7 +101,8 @@ public final class TxBuilder {
     }
 
     var merged = new LinkedHashMap<String, Object>();
-    parties.forEach((name, party) -> merged.put(normalize(name), party.address().value()));
+    parties.forEach(
+        (name, party) -> merged.put(normalize(name), ArgValue.address(party.address())));
     taggedArguments.forEach((name, value) -> merged.put(normalize(name), value));
 
     for (var required : requiredParameters) {

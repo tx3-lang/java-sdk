@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "method": "trp.resolve",
+  "params": {
+    "tir": {"encoding": "hex", "content": "aabb", "version": "v1beta0"},
+    "args": {"quantity": 42}
+  },
+  "id": "resolve-1"
+}

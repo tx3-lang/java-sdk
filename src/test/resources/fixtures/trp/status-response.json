@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "statuses": {
+      "submitted-hash": {
+        "stage": "confirmed",
+        "confirmations": 3,
+        "nonConfirmations": 0,
+        "confirmedAt": {"slot": 123, "blockHash": "block-hash"}
+      }
+    }
+  },
+  "id": "status-1"
+}

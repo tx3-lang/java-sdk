@@ -1,8 +1,8 @@
 # Tx3 SDK for Java
 
 The Java SDK is the Java 21 client library for Tx3 protocols. It contains public contract values,
-the signer interface, the typed error hierarchy, and TII protocol loading and introspection. TRP
-runtime behavior will arrive in later releases.
+the signer interface, the typed error hierarchy, TII protocol loading and introspection, and an
+asynchronous low-level TRP client.
 
 ## Requirements
 
@@ -34,7 +34,13 @@ import land.tx3.sdk.ClientOptions;
 
 var address = new Address("addr_test1...");
 var options = ClientOptions.forEndpoint(java.net.URI.create("http://localhost:8164"));
+var trp = new land.tx3.sdk.TrpClient(options);
 ```
+
+The low-level client exposes `resolve`, `submit`, and `checkStatus`; each returns a
+`CompletableFuture`. Cancelling that future cancels the underlying HTTP operation. Transport
+failures are reported as `TransportException`, whose `failure()` discriminator separates network,
+HTTP status, JSON-RPC, malformed response, timeout, and cancellation cases without message parsing.
 
 Load a canonical TII document from a path, JSON text, bytes, or a Jackson `JsonNode`:
 

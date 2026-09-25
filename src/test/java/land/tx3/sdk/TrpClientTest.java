@@ -191,7 +191,8 @@ class TrpClientTest {
   }
 
   private static void assertMalformedStatusResult(String id, String result) {
-    var malformed = failure(client(responding(200, success(id, result)), id).checkStatus(List.of()));
+    var malformed =
+        failure(client(responding(200, success(id, result)), id).checkStatus(List.of()));
     assertEquals(TransportFailure.MALFORMED_RESPONSE, malformed.failure());
   }
 

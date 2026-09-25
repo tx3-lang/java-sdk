@@ -140,6 +140,37 @@ class TrpClientTest {
     assertEquals(TransportFailure.MALFORMED_RESPONSE, wrongShape.failure());
   }
 
+  @Test
+  void rejectsStatusResponsesMissingRequiredNumericFields() {
+    assertMalformedStatusResult(
+        "missing-confirmations",
+        "{\"statuses\":{\"hash\":{\"stage\":\"confirmed\",\"nonConfirmations\":0}}}");
+    assertMalformedStatusResult(
+        "missing-non-confirmations",
+        "{\"statuses\":{\"hash\":{\"stage\":\"confirmed\",\"confirmations\":1}}}");
+    assertMalformedStatusResult(
+        "missing-slot",
+        "{\"statuses\":{\"hash\":{\"stage\":\"confirmed\",\"confirmations\":1,"
+            + "\"nonConfirmations\":0,\"confirmedAt\":{\"blockHash\":\"block-hash\"}}}}");
+  }
+
+  @Test
+  void rejectsNullRequiredNumericFields() {
+    assertMalformedStatusResult(
+        "null-confirmations",
+        "{\"statuses\":{\"hash\":{\"stage\":\"confirmed\",\"confirmations\":null,"
+            + "\"nonConfirmations\":0}}}");
+    assertMalformedStatusResult(
+        "null-non-confirmations",
+        "{\"statuses\":{\"hash\":{\"stage\":\"confirmed\",\"confirmations\":1,"
+            + "\"nonConfirmations\":null}}}");
+    assertMalformedStatusResult(
+        "null-slot",
+        "{\"statuses\":{\"hash\":{\"stage\":\"confirmed\",\"confirmations\":1,"
+            + "\"nonConfirmations\":0,\"confirmedAt\":{\"slot\":null,"
+            + "\"blockHash\":\"block-hash\"}}}}");
+  }
+
   private static TrpClient client(Transport transport, String id) {
     return new TrpClient(ClientOptions.forEndpoint(ENDPOINT), transport, () -> id);
   }
@@ -157,6 +188,11 @@ class TrpClientTest {
   private static TransportException failure(CompletableFuture<?> future) {
     var completion = assertThrows(CompletionException.class, future::join);
     return assertInstanceOf(TransportException.class, completion.getCause());
+  }
+
+  private static void assertMalformedStatusResult(String id, String result) {
+    var malformed = failure(client(responding(200, success(id, result)), id).checkStatus(List.of()));
+    assertEquals(TransportFailure.MALFORMED_RESPONSE, malformed.failure());
   }
 
   private static String fixture(String name) throws IOException {

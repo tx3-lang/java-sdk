@@ -21,6 +21,7 @@ public final class Tx3Client {
   private final TrpClient trp;
   private final Map<String, Party> parties;
   private final Map<String, Object> environment;
+  private final PollingRuntime polling;
 
   Tx3Client(
       Map<String, TirEnvelope> transactions,
@@ -29,7 +30,8 @@ public final class Tx3Client {
       Set<String> knownParties,
       TrpClient trp,
       Map<String, Party> parties,
-      Map<String, Object> environment) {
+      Map<String, Object> environment,
+      PollingRuntime polling) {
     this.transactions = Collections.unmodifiableMap(new LinkedHashMap<>(transactions));
     this.transactionParameters = transactionParameters;
     this.requiredParameters = requiredParameters;
@@ -37,6 +39,7 @@ public final class Tx3Client {
     this.trp = Objects.requireNonNull(trp, "trp");
     this.parties = Collections.unmodifiableMap(new LinkedHashMap<>(parties));
     this.environment = Collections.unmodifiableMap(new LinkedHashMap<>(environment));
+    this.polling = Objects.requireNonNull(polling, "polling");
   }
 
   /**
@@ -59,7 +62,8 @@ public final class Tx3Client {
         transactionParameters.getOrDefault(canonicalName, Map.of()),
         requiredParameters.getOrDefault(canonicalName, Set.of()),
         environment,
-        parties);
+        parties,
+        polling);
   }
 
   /**
@@ -101,7 +105,8 @@ public final class Tx3Client {
         knownParties,
         trp,
         updated,
-        environment);
+        environment,
+        polling);
   }
 
   private static String normalize(String name) {

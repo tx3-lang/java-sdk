@@ -14,6 +14,7 @@ import com.bloxbean.cardano.client.crypto.config.CryptoConfiguration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.security.MessageDigest;
 import java.util.HexFormat;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -23,12 +24,16 @@ class SignerTest {
   private static JsonNode vectors;
 
   @BeforeAll
-  static void loadVectors() throws IOException {
+  static void loadVectors() throws Exception {
     try (var input = SignerTest.class.getResourceAsStream("/fixtures/signer-vectors.json")) {
       if (input == null) {
         throw new IOException("missing signer vector fixture");
       }
-      vectors = new ObjectMapper().readTree(input);
+      byte[] fixture = input.readAllBytes();
+      assertEquals(
+          "4709a14be0b7cfbb77a31dda0c5933ee5041433f424f1b71cd20c40fe9045d08",
+          HEX.formatHex(MessageDigest.getInstance("SHA-256").digest(fixture)));
+      vectors = new ObjectMapper().readTree(fixture);
     }
   }
 

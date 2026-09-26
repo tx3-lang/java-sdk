@@ -1,2 +1,3 @@
 *.tii text eol=lf
 src/test/resources/fixtures/wire-vectors.json text eol=lf
+src/test/resources/fixtures/signer-vectors.json text eol=lf

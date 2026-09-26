@@ -86,7 +86,8 @@ var client = protocol.client()
 
 var resolved = client.tx("transfer")
     .arg("quantity", 10_000_000)
-    .resolve();
+    .resolve()
+    .join();
 ```
 
 `build()` reports missing connection settings and unknown profile or party names as
@@ -114,6 +115,31 @@ var witness = signer.sign(new SignRequest(txHashHex, txCborHex));
 Key inputs and derived key material are kept in defensive copies and are never written to logs or
 error messages. Invalid keys and malformed hashes use the SDK's typed `ValidationException`;
 derivation, address-binding, and cryptographic failures use `SigningException`.
+
+## Submit and await transactions
+
+The high-level facade continues from `ResolvedTx` through typed signed and submitted states. Every
+signer receives both the resolved hash and full transaction CBOR. Pre-computed wallet witnesses may
+be attached before signing; automatic signer witnesses are submitted first, followed by attached
+witnesses in attachment order.
+
+```java
+var submitted = resolved
+    .addWitness(externalWitness)
+    .sign()
+    .submit()
+    .join();
+
+var status = submitted
+    .waitForConfirmed(land.tx3.sdk.PollConfig.defaults())
+    .join();
+```
+
+`waitForConfirmed` accepts confirmed or finalized status, while `waitForFinalized` accepts only
+finalized status. Dropped and rolled-back transactions fail with `PollingException.Kind.TERMINAL_STAGE`;
+exhausted attempts fail with `PollingException.Kind.TIMEOUT`. Cancelling a returned polling future
+cancels its in-flight status request or scheduled delay. `submit()` rejects a TRP response whose
+hash differs from the signed transaction with `SubmissionException`.
 
 ## Development
 

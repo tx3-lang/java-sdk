@@ -3,12 +3,14 @@ package land.tx3.sdk;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Fluent builder for the single high-level {@link Tx3Client} facade.
@@ -32,6 +34,7 @@ public final class Tx3ClientBuilder {
   private ClientOptions trpOptions;
   private String profile;
   private Transport transport;
+  private PollingRuntime polling = PollingRuntime.system();
 
   private Tx3ClientBuilder(
       Map<String, TirEnvelope> transactions,
@@ -149,6 +152,11 @@ public final class Tx3ClientBuilder {
     return this;
   }
 
+  Tx3ClientBuilder polling(ScheduledExecutorService scheduler, Clock clock) {
+    polling = new PollingRuntime(scheduler, clock);
+    return this;
+  }
+
   /**
    * Validates configuration and creates the immutable high-level client.
    *
@@ -200,7 +208,8 @@ public final class Tx3ClientBuilder {
         knownParties,
         trpClient,
         boundParties,
-        environment);
+        environment,
+        polling);
   }
 
   private static Address profileAddress(String name, JsonNode value) {

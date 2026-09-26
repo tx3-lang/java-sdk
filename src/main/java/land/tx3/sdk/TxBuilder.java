@@ -17,14 +17,15 @@ public final class TxBuilder {
   private final Set<String> requiredParameters;
   private final Map<String, Object> environment;
   private final Map<String, Party> parties;
+  private final PollingRuntime polling;
   private final LinkedHashMap<String, ArgValue> taggedArguments = new LinkedHashMap<>();
 
   TxBuilder() {
-    this("", null, null, Map.of(), Set.of(), Map.of(), Map.of());
+    this("", null, null, Map.of(), Set.of(), Map.of(), Map.of(), PollingRuntime.system());
   }
 
   TxBuilder(Map<String, ParamType> parameters) {
-    this("", null, null, parameters, Set.of(), Map.of(), Map.of());
+    this("", null, null, parameters, Set.of(), Map.of(), Map.of(), PollingRuntime.system());
   }
 
   TxBuilder(
@@ -34,7 +35,8 @@ public final class TxBuilder {
       Map<String, ParamType> parameters,
       Set<String> requiredParameters,
       Map<String, Object> environment,
-      Map<String, Party> parties) {
+      Map<String, Party> parties,
+      PollingRuntime polling) {
     this.transaction = Objects.requireNonNull(transaction, "transaction");
     this.tir = tir;
     this.trp = trp;
@@ -42,6 +44,7 @@ public final class TxBuilder {
     this.requiredParameters = Collections.unmodifiableSet(new LinkedHashSet<>(requiredParameters));
     this.environment = Collections.unmodifiableMap(new LinkedHashMap<>(environment));
     this.parties = Collections.unmodifiableMap(new LinkedHashMap<>(parties));
+    this.polling = Objects.requireNonNull(polling, "polling");
   }
 
   /**
@@ -95,7 +98,7 @@ public final class TxBuilder {
    * @throws ResolutionException if a required transaction parameter has no explicit or injected
    *     value
    */
-  public CompletableFuture<ResolveResponse> resolve() {
+  public CompletableFuture<ResolvedTx> resolve() {
     if (trp == null || tir == null) {
       throw new ValidationException("txBuilder", "this transaction builder cannot resolve");
     }
@@ -113,7 +116,30 @@ public final class TxBuilder {
     }
 
     var env = environment.isEmpty() ? null : new LinkedHashMap<String, Object>(environment);
-    return trp.resolve(new ResolveParams(tir, merged, env));
+    var signers = new java.util.ArrayList<ResolvedTx.SignerEntry>();
+    parties.forEach(
+        (name, party) ->
+            party
+                .signer()
+                .ifPresent(
+                    signer ->
+                        signers.add(new ResolvedTx.SignerEntry(name, party.address(), signer))));
+
+    var pending = trp.resolve(new ResolveParams(tir, merged, env));
+    var result = new CompletableFuture<ResolvedTx>();
+    pending.whenComplete(
+        (response, failure) -> {
+          if (failure != null) {
+            result.completeExceptionally(failure);
+          } else {
+            result.complete(new ResolvedTx(trp, response.hash(), response.tx(), signers, polling));
+          }
+        });
+    result.whenComplete(
+        (ignored, failure) -> {
+          if (result.isCancelled()) pending.cancel(true);
+        });
+    return result;
   }
 
   private static String normalize(String name) {

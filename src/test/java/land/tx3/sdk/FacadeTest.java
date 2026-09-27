@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -96,7 +97,8 @@ class FacadeTest {
     var dynamicParams = dynamicTransport.params();
     var generatedParams = generatedTransport.params();
     assertEquals(dynamicParams, generatedParams);
-    assertEquals(9, dynamicParams.path("env").path("fee").intValue());
+    assertEquals(9, dynamicParams.path("args").path("fee").intValue());
+    assertTrue(dynamicParams.path("env").isMissingNode());
     assertEquals(
         "addr_argument", dynamicParams.path("args").path("sender").path("address").textValue());
     assertEquals(

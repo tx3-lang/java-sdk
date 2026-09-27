@@ -91,9 +91,10 @@ public final class TxBuilder {
   /**
    * Resolves this invocation through the configured TRP client.
    *
-   * <p>Profile environment and party addresses are applied first. Explicit transaction arguments
-   * win over injected party addresses, and every dynamic argument follows its resolved parameter
-   * type. Values supplied through {@link #argTagged} are sent without another encoding pass.
+   * <p>Profile environment and party addresses are applied first as resolver arguments. Explicit
+   * transaction arguments win over injected values, and every dynamic argument follows its resolved
+   * parameter type. Values supplied through {@link #argTagged} are sent without another encoding
+   * pass.
    *
    * @throws ResolutionException if a required transaction parameter has no explicit or injected
    *     value
@@ -103,7 +104,7 @@ public final class TxBuilder {
       throw new ValidationException("txBuilder", "this transaction builder cannot resolve");
     }
 
-    var merged = new LinkedHashMap<String, Object>();
+    var merged = new LinkedHashMap<String, Object>(environment);
     parties.forEach(
         (name, party) -> merged.put(normalize(name), ArgValue.address(party.address())));
     taggedArguments.forEach((name, value) -> merged.put(normalize(name), value));
@@ -115,7 +116,6 @@ public final class TxBuilder {
       }
     }
 
-    var env = environment.isEmpty() ? null : new LinkedHashMap<String, Object>(environment);
     var signers = new java.util.ArrayList<ResolvedTx.SignerEntry>();
     parties.forEach(
         (name, party) ->
@@ -125,7 +125,7 @@ public final class TxBuilder {
                     signer ->
                         signers.add(new ResolvedTx.SignerEntry(name, party.address(), signer))));
 
-    var pending = trp.resolve(new ResolveParams(tir, merged, env));
+    var pending = trp.resolve(new ResolveParams(tir, merged));
     var result = new CompletableFuture<ResolvedTx>();
     pending.whenComplete(
         (response, failure) -> {

@@ -143,6 +143,25 @@ class TransactionLifecycleTest {
   }
 
   @Test
+  void pollingRetriesTransientStatusTransportFailures() {
+    var transport = new LifecycleTransport();
+    transport.failure(
+        new TransportException(
+            TransportFailure.HTTP_STATUS,
+            "TRP returned HTTP status 502",
+            null,
+            502,
+            null,
+            "bad gateway"));
+    transport.status(HASH, TxStage.CONFIRMED);
+
+    var status = submitted(transport).waitForConfirmed(new PollConfig(2, Duration.ZERO)).join();
+
+    assertEquals(TxStage.CONFIRMED, status.stage());
+    assertEquals(List.of("trp.checkStatus", "trp.checkStatus"), transport.methods);
+  }
+
+  @Test
   void cancellationStopsInFlightStatusRequestAndScheduledDelay() {
     var pendingTransport = new LifecycleTransport();
     pendingTransport.pendingStatus();
@@ -231,6 +250,10 @@ class TransactionLifecycleTest {
       var pending = new CompletableFuture<TransportResponse>();
       responses.add(pending);
       return pending;
+    }
+
+    void failure(RuntimeException failure) {
+      responses.add(CompletableFuture.failedFuture(failure));
     }
 
     @Override

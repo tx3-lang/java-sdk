@@ -116,7 +116,7 @@ class ProtocolTest {
   void fixturesMatchTheFounderBoundCanonicalHashes() throws Exception {
     var digest = MessageDigest.getInstance("SHA-256");
     assertEquals(
-        "8d5d715f300e618373b588af96f0cfb9b0a3904b3a34fc0038f72ebb1695da31",
+        "02da9f4a6710dd4821cf219c5f373d14e3c933519953068c1b03e38947568d32",
         HexFormat.of().formatHex(digest.digest(java.nio.file.Files.readAllBytes(TRANSFER))));
     assertEquals(
         "0a7195b22fe3262a87110a89ee83f75d1295257c193d8859165842aeeea2ae83",

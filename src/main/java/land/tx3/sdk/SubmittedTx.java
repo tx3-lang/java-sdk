@@ -77,7 +77,12 @@ public final class SubmittedTx {
         (response, rawFailure) -> {
           if (result.isDone()) return;
           if (rawFailure != null) {
-            result.completeExceptionally(unwrap(rawFailure));
+            var failure = unwrap(rawFailure);
+            if (isRetryableStatusFailure(failure)) {
+              scheduleNext(config, target, attempt, startedAt, result, active);
+            } else {
+              result.completeExceptionally(failure);
+            }
             return;
           }
 
@@ -99,46 +104,69 @@ public final class SubmittedTx {
             }
           }
 
-          if (attempt >= config.attempts()) {
-            Duration elapsed = Duration.between(startedAt, polling.clock().instant());
-            result.completeExceptionally(
-                new PollingException(
-                    PollingException.Kind.TIMEOUT,
-                    hash,
-                    target.wireValue(),
-                    "polling timed out after "
-                        + config.attempts()
-                        + " attempts (elapsed "
-                        + elapsed
-                        + ")"));
-            return;
-          }
-
-          final CompletableFuture<Void> delayFuture;
-          try {
-            delayFuture = polling.delay(config.delay());
-          } catch (RuntimeException failure) {
-            result.completeExceptionally(failure);
-            return;
-          }
-          active.set(delayFuture);
-          if (result.isCancelled()) {
-            delayFuture.cancel(true);
-            return;
-          }
-          delayFuture.whenComplete(
-              (ignored, delayFailure) -> {
-                if (result.isDone()) return;
-                if (delayFailure != null) {
-                  var unwrapped = unwrap(delayFailure);
-                  if (!(unwrapped instanceof CancellationException)) {
-                    result.completeExceptionally(unwrapped);
-                  }
-                  return;
-                }
-                poll(config, target, attempt + 1, startedAt, result, active);
-              });
+          scheduleNext(config, target, attempt, startedAt, result, active);
         });
+  }
+
+  private void scheduleNext(
+      PollConfig config,
+      TxStage target,
+      int attempt,
+      Instant startedAt,
+      CompletableFuture<TxStatus> result,
+      AtomicReference<CompletableFuture<?>> active) {
+    if (attempt >= config.attempts()) {
+      Duration elapsed = Duration.between(startedAt, polling.clock().instant());
+      result.completeExceptionally(
+          new PollingException(
+              PollingException.Kind.TIMEOUT,
+              hash,
+              target.wireValue(),
+              "polling timed out after "
+                  + config.attempts()
+                  + " attempts (elapsed "
+                  + elapsed
+                  + ")"));
+      return;
+    }
+
+    final CompletableFuture<Void> delayFuture;
+    try {
+      delayFuture = polling.delay(config.delay());
+    } catch (RuntimeException failure) {
+      result.completeExceptionally(failure);
+      return;
+    }
+    active.set(delayFuture);
+    if (result.isCancelled()) {
+      delayFuture.cancel(true);
+      return;
+    }
+    delayFuture.whenComplete(
+        (ignored, delayFailure) -> {
+          if (result.isDone()) return;
+          if (delayFailure != null) {
+            var unwrapped = unwrap(delayFailure);
+            if (!(unwrapped instanceof CancellationException)) {
+              result.completeExceptionally(unwrapped);
+            }
+            return;
+          }
+          poll(config, target, attempt + 1, startedAt, result, active);
+        });
+  }
+
+  private static boolean isRetryableStatusFailure(Throwable failure) {
+    if (!(failure instanceof TransportException transport)) return false;
+    if (transport.failure() == TransportFailure.NETWORK
+        || transport.failure() == TransportFailure.TIMEOUT) {
+      return true;
+    }
+    if (transport.failure() != TransportFailure.HTTP_STATUS || transport.httpStatus() == null) {
+      return false;
+    }
+    int status = transport.httpStatus();
+    return status == 408 || status == 425 || status == 429 || status >= 500;
   }
 
   private static Throwable unwrap(Throwable raw) {

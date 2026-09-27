@@ -28,7 +28,7 @@ class TransactionE2eTest {
           "TEST_PARTY_B_MNEMONIC");
 
   @Test
-  void transferCompletesResolveSignSubmitConfirmAndFinalize() {
+  void transferCompletesResolveSignSubmitAndConfirm() {
     var env = environment();
     var client = liveClient(env);
 
@@ -39,9 +39,6 @@ class TransactionE2eTest {
     var submitted = signed.submit().join();
     var confirmed = submitted.waitForConfirmed(PollConfig.defaults()).join();
     assertTrue(confirmed.stage() == TxStage.CONFIRMED || confirmed.stage() == TxStage.FINALIZED);
-
-    var finalized = submitted.waitForFinalized(new PollConfig(120, Duration.ofSeconds(5))).join();
-    assertEquals(TxStage.FINALIZED, finalized.stage());
   }
 
   @Test

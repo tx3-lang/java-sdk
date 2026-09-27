@@ -174,8 +174,10 @@ exclude the `e2e` JUnit tag. To exercise the canonical transfer lifecycle agains
 
 Without those variables a local e2e run is skipped with the missing names. CI treats any missing
 value as an error. The live suite loads the pinned `transfer.tii`, resolves, signs with party A,
-submits, and waits for confirmed and finalized status; it also checks typed missing-argument and
-bad-endpoint failures. Secret values are never logged or stored by the tests.
+submits, and waits for confirmed status; finalized polling remains covered by mocked-TRP unit tests
+because preprod does not report finalized transactions through `checkStatus`. The suite also checks
+typed missing-argument and bad-endpoint failures. Secret values are never logged or stored by the
+tests.
 
 ## Generated clients
 

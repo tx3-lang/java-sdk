@@ -153,11 +153,11 @@ class TransactionLifecycleTest {
             502,
             null,
             "bad gateway"));
-    transport.status(HASH, TxStage.FINALIZED);
+    transport.status(HASH, TxStage.CONFIRMED);
 
-    var status = submitted(transport).waitForFinalized(new PollConfig(2, Duration.ZERO)).join();
+    var status = submitted(transport).waitForConfirmed(new PollConfig(2, Duration.ZERO)).join();
 
-    assertEquals(TxStage.FINALIZED, status.stage());
+    assertEquals(TxStage.CONFIRMED, status.stage());
     assertEquals(List.of("trp.checkStatus", "trp.checkStatus"), transport.methods);
   }
 

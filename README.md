@@ -138,8 +138,10 @@ var status = submitted
 `waitForConfirmed` accepts confirmed or finalized status, while `waitForFinalized` accepts only
 finalized status. Dropped and rolled-back transactions fail with `PollingException.Kind.TERMINAL_STAGE`;
 exhausted attempts fail with `PollingException.Kind.TIMEOUT`. Cancelling a returned polling future
-cancels its in-flight status request or scheduled delay. `submit()` rejects a TRP response whose
-hash differs from the signed transaction with `SubmissionException`.
+cancels its in-flight status request or scheduled delay. Status polling retries transient network and
+timeout failures, HTTP 408/425/429 responses, and HTTP 5xx responses within the configured attempt
+limit; other transport failures are returned immediately. `submit()` rejects a TRP response whose hash
+differs from the signed transaction with `SubmissionException`.
 
 ## Development
 

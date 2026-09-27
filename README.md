@@ -161,6 +161,45 @@ To record the resolved dependency tree exactly as CI does:
 
 The test suite is deterministic and needs no TRP endpoint or credentials.
 
+Unit tests and live tests are selected independently. The ordinary `test` and `verify` commands
+exclude the `e2e` JUnit tag. To exercise the canonical transfer lifecycle against preprod, set
+`TRP_ENDPOINT_PREPROD`, `TRP_API_KEY_PREPROD`, `TEST_PARTY_A_ADDRESS`,
+`TEST_PARTY_A_MNEMONIC`, `TEST_PARTY_B_ADDRESS`, and `TEST_PARTY_B_MNEMONIC`, then run:
+
+```shell
+./mvnw -B -ntp -Pe2e verify
+```
+
+Without those variables a local e2e run is skipped with the missing names. CI treats any missing
+value as an error. The live suite loads the pinned `transfer.tii`, resolves, signs with party A,
+submits, and waits for confirmed and finalized status; it also checks typed missing-argument and
+bad-endpoint failures. Secret values are never logged or stored by the tests.
+
+## Generated clients
+
+The `java-client` template is built into `tx3c`. Generate typed bindings from a TII document and
+compile them against this runtime with:
+
+```shell
+tx3c codegen --tii transfer.tii --template java-client --output generated-client
+./mvnw -B -ntp -f generated-client/pom.xml verify
+```
+
+Generated clients use the same `Tx3ClientBuilder`, `ArgValue`, lifecycle, signer, and typed error
+APIs shown above and do not need the source TII at runtime. CI renders the canonical transfer and
+complex fixtures with the pinned tx3c revision and compiles both from a clean output directory.
+
+## Release mechanics
+
+Releases are driven only by annotated `vMAJOR.MINOR.PATCH` tags. The tag must exactly match the
+POM version and the `MAJOR.MINOR` value in `.github/release-train`. The release workflow reruns the
+checks, builds the main, source, and Javadoc artifacts, verifies the approved signing-key
+fingerprint, signs the artifacts, publishes `land.tx3:tx3-sdk` through the Maven Central Portal,
+waits for publication, and resolves the released version from a fresh Maven repository before
+running the external consumer. Publishing credentials and signing material are supplied only by
+the restricted organization secrets documented for repository operators; local builds do not
+need them.
+
 ## Platform scope
 
 The supported baseline is Java SE 21 on macOS, Linux, and Windows, on x64 and ARM64 where hosted

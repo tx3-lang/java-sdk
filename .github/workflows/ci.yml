@@ -2,45 +2,139 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
-    defaults:
-      run:
-        shell: bash
+  unit:
+    name: unit (${{ matrix.runner }})
     strategy:
       fail-fast: false
       matrix:
-        runner:
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
-          - windows-2025
-          - windows-11-arm
-          - macos-15-intel
-          - macos-14
+        runner: [ubuntu-24.04, macos-15, windows-2025]
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - name: Check formatting
-        run: ./mvnw -B -ntp spotless:check
-      - name: Run unit tests
-        run: ./mvnw -B -ntp test
-      - name: Verify package
-        run: ./mvnw -B -ntp verify
-      - name: Resolve package from an external consumer
-        run: ./mvnw -B -ntp install && ./mvnw -B -ntp -f examples/consumer/pom.xml package
+      - run: ./mvnw -B -ntp spotless:check
+        shell: bash
+      - run: ./mvnw -B -ntp test
+        shell: bash
+      - run: ./mvnw -B -ntp verify
+        shell: bash
+      - name: Build and run a clean external consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          repository="${RUNNER_TEMP}/consumer-m2"
+          consumer="${RUNNER_TEMP}/consumer-app"
+          cp -R examples/consumer "$consumer"
+          ./mvnw -B -ntp -Drevision=0.15.0-SNAPSHOT -Dmaven.repo.local="$repository" install
+          ./mvnw -B -ntp -Dmaven.repo.local="$repository" \
+            -Dtx3.sdk.version=0.15.0-SNAPSHOT \
+            -f "$consumer/pom.xml" verify exec:java
       - name: Record dependency tree
+        shell: bash
         run: ./mvnw -B -ntp dependency:tree -DoutputFile=target/dependency-tree.txt
+      - name: Inspect package contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar tf target/tx3-sdk-0.15.0.jar | tee target/package-contents.txt
+          grep -qx 'META-INF/LICENSE' target/package-contents.txt
+          grep -qx 'land/tx3/sdk/Tx3Client.class' target/package-contents.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: dependency-tree-${{ matrix.runner }}
-          path: target/dependency-tree.txt
+          name: package-evidence-${{ matrix.runner }}
+          path: |
+            target/tx3-sdk-0.15.0.jar
+            target/package-contents.txt
+            target/dependency-tree.txt
+
+  e2e:
+    name: live TRP e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      TRP_ENDPOINT_PREPROD: ${{ secrets.TRP_ENDPOINT_PREPROD }}
+      TRP_API_KEY_PREPROD: ${{ secrets.TRP_API_KEY_PREPROD }}
+      TEST_PARTY_A_ADDRESS: ${{ secrets.TEST_PARTY_A_ADDRESS }}
+      TEST_PARTY_A_MNEMONIC: ${{ secrets.TEST_PARTY_A_MNEMONIC }}
+      TEST_PARTY_B_ADDRESS: ${{ secrets.TEST_PARTY_B_ADDRESS }}
+      TEST_PARTY_B_MNEMONIC: ${{ secrets.TEST_PARTY_B_MNEMONIC }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Require canonical e2e configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in TRP_ENDPOINT_PREPROD TRP_API_KEY_PREPROD TEST_PARTY_A_ADDRESS TEST_PARTY_A_MNEMONIC TEST_PARTY_B_ADDRESS TEST_PARTY_B_MNEMONIC; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required e2e configuration: $name" >&2
+              exit 1
+            fi
+          done
+      - run: ./mvnw -B -ntp -Pe2e verify
+
+  codegen:
+    name: generated Java client
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: dtolnay/rust-toolchain@1.91
+      - name: Install this checkout as the snapshot runtime
+        run: ./mvnw -B -ntp -Drevision=0.15.0-SNAPSHOT -Dmaven.repo.local="${RUNNER_TEMP}/codegen-m2" -DskipTests install
+      - name: Build pinned tx3c
+        uses: actions/checkout@v4
+        with:
+          repository: tx3-lang/tx3
+          ref: 456f68503a1306c865b17666a9ee1f1d801bd23b
+          path: .tx3c-source
+          persist-credentials: false
+      - run: cargo build -p tx3c --locked
+        working-directory: .tx3c-source
+      - name: Render and compile canonical fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          for fixture in transfer complex; do
+            output="${RUNNER_TEMP}/generated-${fixture}"
+            .tx3c-source/target/debug/tx3c codegen \
+              --tii "src/test/resources/fixtures/${fixture}.tii" \
+              --template java-client \
+              --output "$output"
+            ./mvnw -B -ntp -f "$output/pom.xml" \
+              -Dmaven.repo.local="${RUNNER_TEMP}/codegen-m2" \
+              -Dtx3.sdk.version=0.15.0-SNAPSHOT verify
+          done

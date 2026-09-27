@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish Maven Central package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          server-id: central
+          server-username: MAVEN_CENTRAL_USERNAME
+          server-password: MAVEN_CENTRAL_TOKEN
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+      - name: Require release credentials
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+          MAVEN_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          for name in MAVEN_CENTRAL_USERNAME MAVEN_CENTRAL_TOKEN MAVEN_GPG_PRIVATE_KEY MAVEN_GPG_PASSPHRASE; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required release secret: $name" >&2
+              exit 1
+            fi
+          done
+      - name: Validate tag, package version, and fleet train
+        run: |
+          set -euo pipefail
+          if [ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" != "tag" ]; then
+            echo "Release tag must be annotated: ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+          scripts/check-release-version.sh "${GITHUB_REF_NAME}"
+      - name: Verify signing identity
+        run: |
+          set -euo pipefail
+          expected="6F26BB15DE0BACF2150B7C359BFB64674ED089FE"
+          actual="$(gpg --batch --with-colons --fingerprint | awk -F: '$1 == "fpr" { print $10; exit }')"
+          if [ "$actual" != "$expected" ]; then
+            echo "Imported signing key fingerprint does not match the approved identity." >&2
+            exit 1
+          fi
+      - name: Test, package, sign, and publish
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: ./mvnw -B -ntp -Prelease deploy
+      - name: Verify clean Maven Central consumption
+        run: |
+          set -euo pipefail
+          repository="$(mktemp -d)"
+          consumer="$(mktemp -d)"
+          cp -R examples/consumer/. "$consumer"
+          ./mvnw -B -ntp -Dmaven.repo.local="$repository" \
+            -Dtx3.sdk.version="${GITHUB_REF_NAME#v}" \
+            -f "$consumer/pom.xml" verify exec:java

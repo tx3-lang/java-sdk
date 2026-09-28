@@ -112,29 +112,9 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - uses: dtolnay/rust-toolchain@1.91
-      - name: Install this checkout as the snapshot runtime
-        run: ./mvnw -B -ntp -Drevision=0.15.0-SNAPSHOT -Dmaven.repo.local="${RUNNER_TEMP}/codegen-m2" -DskipTests install
-      - name: Build pinned tx3c
-        uses: actions/checkout@v4
-        with:
-          repository: tx3-lang/tx3
-          ref: 456f68503a1306c865b17666a9ee1f1d801bd23b
-          path: .tx3c-source
-          persist-credentials: false
-      - run: cargo build -p tx3c --locked
-        working-directory: .tx3c-source
-      - name: Render and compile canonical fixtures
-        shell: bash
-        run: |
-          set -euo pipefail
-          for fixture in transfer complex; do
-            output="${RUNNER_TEMP}/generated-${fixture}"
-            .tx3c-source/target/debug/tx3c codegen \
-              --tii "src/test/resources/fixtures/${fixture}.tii" \
-              --template java-client \
-              --output "$output"
-            ./mvnw -B -ntp -f "$output/pom.xml" \
-              -Dmaven.repo.local="${RUNNER_TEMP}/codegen-m2" \
-              -Dtx3.sdk.version=0.15.0-SNAPSHOT verify
-          done
+      - name: Setup tx3 toolchain
+        uses: tx3-lang/actions/setup@v1
+      - name: Render, smoke-check, and compile the generated client
+        env:
+          CODEGEN_M2_REPO: ${{ runner.temp }}/codegen-m2
+        run: bash .github/scripts/codegen-check.sh

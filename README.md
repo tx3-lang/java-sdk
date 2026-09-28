@@ -12,12 +12,7 @@ signer derived at `m/1852'/1815'/0'/0/0`.
 
 ## Use from Maven
 
-The package coordinates are `land.tx3:tx3-sdk:0.15.0`. Until the first Maven Central release,
-install the package from this checkout before resolving it from a local consumer:
-
-```shell
-./mvnw -B -ntp install
-```
+The package is published to Maven Central as `land.tx3:tx3-sdk`:
 
 ```xml
 <dependency>
